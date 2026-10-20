@@ -31,6 +31,7 @@ function openInvitation() {
   cover.classList.add("is-opening");
   invitation.removeAttribute("inert");
   invitation.setAttribute("aria-hidden", "false");
+  playMusic();
   window.setTimeout(() => cover.setAttribute("aria-hidden", "true"), 1000);
   document.querySelector("#inicio").setAttribute("tabindex", "-1");
   window.setTimeout(() => document.querySelector("#inicio").focus({ preventScroll: true }), 350);
@@ -56,15 +57,7 @@ function createSparkles() {
   }
 }
 
-async function toggleMusic() {
-  if (musicToggle.getAttribute("aria-pressed") === "true") {
-    backgroundMusic.pause();
-    musicToggle.setAttribute("aria-pressed", "false");
-    musicToggle.setAttribute("aria-label", "Activar música de fondo");
-    musicToggle.title = "Activar música de fondo";
-    return;
-  }
-
+async function playMusic() {
   try {
     await backgroundMusic.play();
     musicToggle.setAttribute("aria-pressed", "true");
@@ -79,6 +72,18 @@ async function toggleMusic() {
   }
 }
 
+async function toggleMusic() {
+  if (musicToggle.getAttribute("aria-pressed") === "true") {
+    backgroundMusic.pause();
+    musicToggle.setAttribute("aria-pressed", "false");
+    musicToggle.setAttribute("aria-label", "Activar música de fondo");
+    musicToggle.title = "Activar música de fondo";
+    return;
+  }
+
+  await playMusic();
+}
+
 openButton.addEventListener("click", openInvitation);
 messageField.addEventListener("input", updateWhatsAppLink);
 musicToggle.addEventListener("click", toggleMusic);
@@ -86,6 +91,7 @@ musicToggle.addEventListener("click", toggleMusic);
 updateCountdown();
 window.setInterval(updateCountdown, 1000);
 updateWhatsAppLink();
+playMusic();
 
 if (!reduceMotion.matches && "IntersectionObserver" in window) {
   const observer = new IntersectionObserver((entries, activeObserver) => {
