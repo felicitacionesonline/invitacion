@@ -56,25 +56,57 @@ function createSparkles() {
 }
 
 let audioContext;
+let musicOutput;
+let reverbDelay;
+let reverbOutput;
 let musicTimer;
 let noteIndex = 0;
-const notes = [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 349.23];
+const progression = [
+  [261.63, 329.63, 392, 523.25],
+  [220, 261.63, 329.63, 440],
+  [174.61, 220, 261.63, 349.23],
+  [196, 246.94, 293.66, 392]
+];
 
-function playNote() {
-  if (!audioContext || audioContext.state !== "running") return;
+function createMusicOutput() {
+  musicOutput = audioContext.createGain();
+  reverbDelay = audioContext.createDelay(1.5);
+  reverbOutput = audioContext.createGain();
+
+  musicOutput.gain.value = 0.7;
+  reverbDelay.delayTime.value = 0.42;
+  reverbOutput.gain.value = 0.18;
+  musicOutput.connect(audioContext.destination);
+  reverbDelay.connect(reverbOutput);
+  reverbOutput.connect(audioContext.destination);
+}
+
+function playTone(frequency, startTime, duration, volume, type = "sine") {
   const oscillator = audioContext.createOscillator();
-  const gain = audioContext.createGain();
-  const now = audioContext.currentTime;
+  const envelope = audioContext.createGain();
 
-  oscillator.type = "sine";
-  oscillator.frequency.value = notes[noteIndex % notes.length];
-  gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(0.045, now + 0.12);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 1.35);
-  oscillator.connect(gain);
-  gain.connect(audioContext.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 1.4);
+  oscillator.type = type;
+  oscillator.frequency.value = frequency;
+  envelope.gain.setValueAtTime(0.0001, startTime);
+  envelope.gain.exponentialRampToValueAtTime(volume, startTime + 0.035);
+  envelope.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  oscillator.connect(envelope);
+  envelope.connect(musicOutput);
+  envelope.connect(reverbDelay);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration + 0.05);
+}
+
+function playAmbientBeat() {
+  if (!audioContext || audioContext.state !== "running") return;
+  const now = audioContext.currentTime;
+  const beat = noteIndex % 12;
+  const chord = progression[Math.floor(beat / 3)];
+  const position = beat % 3;
+
+  playTone(chord[position], now, 1.05, 0.035);
+  if (position === 0) playTone(chord[0] / 2, now, 1.35, 0.045, "triangle");
+  if (position === 2) playTone(chord[3] * 2, now, 1.4, 0.012);
   noteIndex += 1;
 }
 
@@ -86,23 +118,35 @@ async function toggleMusic() {
       return;
     }
     audioContext = new AudioContextClass();
+    createMusicOutput();
   }
 
-  if (audioContext.state === "running") {
+  if (musicToggle.getAttribute("aria-pressed") === "true") {
     window.clearInterval(musicTimer);
-    await audioContext.suspend();
+    if (audioContext.state === "running") await audioContext.suspend();
     musicToggle.setAttribute("aria-pressed", "false");
     musicToggle.setAttribute("aria-label", "Activar música de fondo");
     musicToggle.title = "Activar música de fondo";
     return;
   }
 
-  await audioContext.resume();
-  playNote();
-  musicTimer = window.setInterval(playNote, 850);
   musicToggle.setAttribute("aria-pressed", "true");
   musicToggle.setAttribute("aria-label", "Silenciar música de fondo");
   musicToggle.title = "Silenciar música de fondo";
+
+  try {
+    await audioContext.resume();
+    if (musicToggle.getAttribute("aria-pressed") !== "true") {
+      if (audioContext.state === "running") await audioContext.suspend();
+      return;
+    }
+    playAmbientBeat();
+    musicTimer = window.setInterval(playAmbientBeat, 700);
+  } catch {
+    musicToggle.setAttribute("aria-pressed", "false");
+    musicToggle.setAttribute("aria-label", "Activar música de fondo");
+    musicToggle.title = "El navegador no permitió iniciar el audio";
+  }
 }
 
 openButton.addEventListener("click", openInvitation);
