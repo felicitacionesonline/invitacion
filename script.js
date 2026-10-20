@@ -36,7 +36,7 @@ function openInvitation() {
 }
 
 function updateWhatsAppLink() {
-  whatsappLink.href = `https://wa.me/59168837629?text=${encodeURIComponent(messageField.value.trim())}`;
+  whatsappLink.href = `https://wa.me/59174953926?text=${encodeURIComponent(messageField.value.trim())}`;
 }
 
 function createSparkles() {
@@ -73,9 +73,9 @@ function createMusicOutput() {
   reverbDelay = audioContext.createDelay(1.5);
   reverbOutput = audioContext.createGain();
 
-  musicOutput.gain.value = 0.7;
+  musicOutput.gain.value = 0.8;
   reverbDelay.delayTime.value = 0.42;
-  reverbOutput.gain.value = 0.18;
+  reverbOutput.gain.value = 0.2;
   musicOutput.connect(audioContext.destination);
   reverbDelay.connect(reverbOutput);
   reverbOutput.connect(audioContext.destination);
@@ -104,9 +104,9 @@ function playAmbientBeat() {
   const chord = progression[Math.floor(beat / 3)];
   const position = beat % 3;
 
-  playTone(chord[position], now, 1.05, 0.035);
-  if (position === 0) playTone(chord[0] / 2, now, 1.35, 0.045, "triangle");
-  if (position === 2) playTone(chord[3] * 2, now, 1.4, 0.012);
+  playTone(chord[position], now, 1.05, 0.055);
+  if (position === 0) playTone(chord[0] / 2, now, 1.35, 0.065, "triangle");
+  if (position === 2) playTone(chord[3] * 2, now, 1.4, 0.02);
   noteIndex += 1;
 }
 
