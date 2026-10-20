@@ -7,6 +7,7 @@ const openButton = document.querySelector("#open-invitation");
 const messageField = document.querySelector("#whatsapp-message");
 const whatsappLink = document.querySelector("#whatsapp-link");
 const musicToggle = document.querySelector("#music-toggle");
+const backgroundMusic = document.querySelector("#background-music");
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 function updateCountdown() {
@@ -55,97 +56,26 @@ function createSparkles() {
   }
 }
 
-let audioContext;
-let musicOutput;
-let reverbDelay;
-let reverbOutput;
-let musicTimer;
-let noteIndex = 0;
-const progression = [
-  [261.63, 329.63, 392, 523.25],
-  [220, 261.63, 329.63, 440],
-  [174.61, 220, 261.63, 349.23],
-  [196, 246.94, 293.66, 392]
-];
-
-function createMusicOutput() {
-  musicOutput = audioContext.createGain();
-  reverbDelay = audioContext.createDelay(1.5);
-  reverbOutput = audioContext.createGain();
-
-  musicOutput.gain.value = 0.8;
-  reverbDelay.delayTime.value = 0.42;
-  reverbOutput.gain.value = 0.2;
-  musicOutput.connect(audioContext.destination);
-  reverbDelay.connect(reverbOutput);
-  reverbOutput.connect(audioContext.destination);
-}
-
-function playTone(frequency, startTime, duration, volume, type = "sine") {
-  const oscillator = audioContext.createOscillator();
-  const envelope = audioContext.createGain();
-
-  oscillator.type = type;
-  oscillator.frequency.value = frequency;
-  envelope.gain.setValueAtTime(0.0001, startTime);
-  envelope.gain.exponentialRampToValueAtTime(volume, startTime + 0.035);
-  envelope.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-  oscillator.connect(envelope);
-  envelope.connect(musicOutput);
-  envelope.connect(reverbDelay);
-  oscillator.start(startTime);
-  oscillator.stop(startTime + duration + 0.05);
-}
-
-function playAmbientBeat() {
-  if (!audioContext || audioContext.state !== "running") return;
-  const now = audioContext.currentTime;
-  const beat = noteIndex % 12;
-  const chord = progression[Math.floor(beat / 3)];
-  const position = beat % 3;
-
-  playTone(chord[position], now, 1.05, 0.055);
-  if (position === 0) playTone(chord[0] / 2, now, 1.35, 0.065, "triangle");
-  if (position === 2) playTone(chord[3] * 2, now, 1.4, 0.02);
-  noteIndex += 1;
-}
-
 async function toggleMusic() {
-  if (!audioContext) {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) {
-      musicToggle.title = "La música no está disponible en este navegador";
-      return;
-    }
-    audioContext = new AudioContextClass();
-    createMusicOutput();
-  }
-
   if (musicToggle.getAttribute("aria-pressed") === "true") {
-    window.clearInterval(musicTimer);
-    if (audioContext.state === "running") await audioContext.suspend();
+    backgroundMusic.pause();
     musicToggle.setAttribute("aria-pressed", "false");
     musicToggle.setAttribute("aria-label", "Activar música de fondo");
     musicToggle.title = "Activar música de fondo";
     return;
   }
 
-  musicToggle.setAttribute("aria-pressed", "true");
-  musicToggle.setAttribute("aria-label", "Silenciar música de fondo");
-  musicToggle.title = "Silenciar música de fondo";
-
   try {
-    await audioContext.resume();
-    if (musicToggle.getAttribute("aria-pressed") !== "true") {
-      if (audioContext.state === "running") await audioContext.suspend();
-      return;
-    }
-    playAmbientBeat();
-    musicTimer = window.setInterval(playAmbientBeat, 700);
-  } catch {
+    await backgroundMusic.play();
+    musicToggle.setAttribute("aria-pressed", "true");
+    musicToggle.setAttribute("aria-label", "Silenciar música de fondo");
+    musicToggle.title = "Silenciar música de fondo";
+  } catch (error) {
     musicToggle.setAttribute("aria-pressed", "false");
     musicToggle.setAttribute("aria-label", "Activar música de fondo");
-    musicToggle.title = "El navegador no permitió iniciar el audio";
+    musicToggle.title = error.name === "NotSupportedError"
+      ? "El formato del archivo de audio no es compatible con este navegador"
+      : "No se pudo reproducir el archivo de audio";
   }
 }
 
